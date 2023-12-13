@@ -13,12 +13,12 @@ enum CellType {
 
 #[derive(Clone)]
 struct Cell {
-    cell_value: u32,
+    cell_value: usize,
     cell_type: CellType,
 }
 
 impl Cell {
-    fn new(cell_value: u32, cell_type: CellType) -> Self {
+    fn new(cell_value: usize, cell_type: CellType) -> Self {
         Cell {
             cell_value,
             cell_type,
@@ -29,12 +29,16 @@ impl Cell {
         self.cell_type == CellType::Digit
     }
 
-    fn is_symbol(&self) -> bool {
-        self.cell_type == CellType::Symbol
+    fn is_symbol_or_gear(&self) -> bool {
+        self.cell_type == CellType::Symbol || self.cell_type == CellType::Gear
+    }
+
+    fn is_gear(&self) -> bool {
+        self.cell_type == CellType::Gear
     }
 }
 
-pub fn totals() -> Result<(u32, u32), Box<dyn Error>> {
+pub fn totals() -> Result<(usize, usize), Box<dyn Error>> {
     let file_path = format!(
         "{}/data/input_day_03.txt",
         env::current_dir().unwrap().display()
@@ -45,9 +49,9 @@ pub fn totals() -> Result<(u32, u32), Box<dyn Error>> {
     ))
 }
 
-fn sum_part_numbers(input: String) -> Result<u32, Box<dyn Error>> {
+fn sum_part_numbers(input: String) -> Result<usize, Box<dyn Error>> {
     let schem = create_padded_schematic(input)?;
-    let mut sum: u32 = 0;
+    let mut sum: usize = 0;
 
     for (row_index, row) in schem.iter().enumerate() {
         // Skip first and last rows as these are just for padding.
@@ -55,7 +59,7 @@ fn sum_part_numbers(input: String) -> Result<u32, Box<dyn Error>> {
             continue;
         }
 
-        let mut digits: Vec<u32> = vec![];
+        let mut digits: Vec<usize> = vec![];
 
         for (cell_index, cell) in row.iter().enumerate() {
             if cell.is_digit() {
@@ -75,52 +79,52 @@ fn sum_part_numbers(input: String) -> Result<u32, Box<dyn Error>> {
             // Scan around the cell.
             for i in 0..scan_width {
                 // Scan above.
-                if schem[row_index - 1][(cell_index - scan_width) + i].is_symbol() {
+                if schem[row_index - 1][(cell_index - scan_width) + i].is_symbol_or_gear() {
                     is_part = true;
                 }
 
                 // Scan below.
-                if schem[row_index + 1][(cell_index - scan_width) + i].is_symbol() {
+                if schem[row_index + 1][(cell_index - scan_width) + i].is_symbol_or_gear() {
                     is_part = true;
                 }
 
                 // Scan left.
                 if i == 0 {
-                    if schem[row_index][cell_index - (scan_width + 1)].is_symbol() {
+                    if schem[row_index][cell_index - (scan_width + 1)].is_symbol_or_gear() {
                         is_part = true;
                     }
 
-                    if schem[row_index - 1][cell_index - (scan_width + 1)].is_symbol() {
+                    if schem[row_index - 1][cell_index - (scan_width + 1)].is_symbol_or_gear() {
                         is_part = true;
                     }
 
-                    if schem[row_index + 1][cell_index - (scan_width + 1)].is_symbol() {
+                    if schem[row_index + 1][cell_index - (scan_width + 1)].is_symbol_or_gear() {
                         is_part = true;
                     }
                 }
 
                 // Scan right.
                 if i == (scan_width - 1) {
-                    if schem[row_index][cell_index].is_symbol() {
+                    if schem[row_index][cell_index].is_symbol_or_gear() {
                         is_part = true;
                     }
 
-                    if schem[row_index - 1][cell_index].is_symbol() {
+                    if schem[row_index - 1][cell_index].is_symbol_or_gear() {
                         is_part = true;
                     }
 
-                    if schem[row_index + 1][cell_index].is_symbol() {
+                    if schem[row_index + 1][cell_index].is_symbol_or_gear() {
                         is_part = true;
                     }
                 }
             }
 
             if is_part {
-                // We now need to convert the vec of u32 into strings, concatenate them, and
-                // convert back to u32 :facepalm: Must be a nicer way than this...
+                // We now need to convert the vec of usize into strings, concatenate them, and
+                // convert back to usize :facepalm: Must be a nicer way than this...
                 let string_vals: Vec<String> = digits.iter().map(|&n| n.to_string()).collect();
                 let concat_string: String = string_vals.join("");
-                sum += concat_string.parse::<u32>()?;
+                sum += concat_string.parse::<usize>()?;
             }
 
             digits.clear();
@@ -130,9 +134,93 @@ fn sum_part_numbers(input: String) -> Result<u32, Box<dyn Error>> {
     Ok(sum)
 }
 
-fn sum_gear_ratios(input: String) -> Result<u32, Box<dyn Error>> {
-    // TODO: Implementation.
-    Ok(0)
+fn sum_gear_ratios(input: String) -> Result<usize, Box<dyn Error>> {
+    let schem = create_padded_schematic(input)?;
+    let mut part_num_sum: Vec<usize> = vec![];
+
+    for (row_index, row) in schem.iter().enumerate() {
+        // Skip first and last rows as these are just for padding.
+        if row_index == 0 || row_index == (schem.len() - 1) {
+            continue;
+        }
+
+        let mut part_nums: Vec<usize> = vec![];
+
+        for (cell_index, cell) in row.iter().enumerate() {
+            // Skip first cell as this is just padding.
+            if cell_index == 0 {
+                continue;
+            }
+
+            if !cell.is_gear() {
+                continue;
+            }
+
+            let mut part_num: Vec<usize> = vec![];
+
+            for i in 0..2 {
+                // Scan above.
+                if schem[row_index - 1][(cell_index - 1) + i].is_digit() {
+                    if let Some(p) = scan_part_num(&schem, row_index - 1, (cell_index - 1) + i) {
+                        part_num.push(p)
+                    }
+                }
+
+                // Scan below.
+                if schem[row_index + 1][(cell_index - i) + i].is_digit() {
+                    if let Some(p) = scan_part_num(&schem, row_index + 1, (cell_index - 1) + i) {
+                        part_num.push(p)
+                    }
+                }
+            }
+
+            // Scan left.
+            if schem[row_index][cell_index - 1].is_digit() {
+                if let Some(p) = scan_part_num(&schem, row_index, cell_index - 1) {
+                    part_num.push(p)
+                }
+            }
+
+            // Scan right.
+            if schem[row_index][cell_index + 1].is_digit() {
+                if let Some(p) = scan_part_num(&schem, row_index, cell_index + 1) {
+                    part_num.push(p)
+                }
+            }
+
+            if !part_num.is_empty() {
+                // We now need to convert the vec of usize into strings, concatenate them, and
+                // convert back to usize :facepalm: Must be a nicer way than this...
+                let string_vals: Vec<String> = part_nums.iter().map(|&n| n.to_string()).collect();
+                let concat_string: String = string_vals.join("");
+                part_nums.push(concat_string.parse::<usize>()?);
+            }
+        }
+
+        if !part_nums.is_empty() {
+            part_num_sum.push(part_nums.iter().cloned().fold(0, |acc, x| acc * x));
+        }
+    }
+
+    Ok(part_num_sum.iter().sum())
+}
+
+fn scan_part_num(schem: &[Vec<Cell>], col: usize, row: usize) -> Option<usize> {
+    let mut part_num: Vec<usize> = vec![];
+    let mut pos: usize = col;
+
+    loop {
+        part_num.insert(0, schem[row][pos].cell_value);
+        if pos == 0 {
+            break;
+        }
+        pos -= 1;
+        if !schem[row][pos].is_digit() {
+            break;
+        }
+    }
+
+    Some(part_num.iter().sum())
 }
 
 fn create_padded_schematic(input: String) -> Result<Vec<Vec<Cell>>, Box<dyn Error>> {
@@ -140,7 +228,7 @@ fn create_padded_schematic(input: String) -> Result<Vec<Vec<Cell>>, Box<dyn Erro
     let reader = BufReader::new(cursor);
 
     let mut schematic: Vec<Vec<Cell>> = Vec::new();
-    let mut line_len: u32 = 0;
+    let mut line_len: usize = 0;
 
     for (i, line) in reader.lines().enumerate() {
         let line = line.unwrap_or_default();
@@ -152,7 +240,7 @@ fn create_padded_schematic(input: String) -> Result<Vec<Vec<Cell>>, Box<dyn Erro
 
         // We only need to set the length once.
         if i == 0 {
-            line_len = line.len().to_u32().unwrap();
+            line_len = line.len().to_usize().unwrap();
         }
 
         let mut row: Vec<Cell> = Vec::new();
@@ -161,8 +249,9 @@ fn create_padded_schematic(input: String) -> Result<Vec<Vec<Cell>>, Box<dyn Erro
                 '.' => (0, CellType::Period),
                 '0'..='9' => {
                     let value = char.to_digit(10).ok_or("invalid digit")?;
-                    (value, CellType::Digit)
+                    (value.to_usize()?, CellType::Digit)
                 }
+                '*' => (0, CellType::Gear),
                 _ => (0, CellType::Symbol),
             };
 
@@ -197,7 +286,7 @@ fn create_padded_schematic(input: String) -> Result<Vec<Vec<Cell>>, Box<dyn Erro
 mod tests {
     use super::{sum_gear_ratios, sum_part_numbers};
 
-    fn test_sum_part_numbers_case(input: &str, want: u32) -> Result<(), String> {
+    fn test_sum_part_numbers_case(input: &str, want: usize) -> Result<(), String> {
         match sum_part_numbers(String::from(input)) {
             Ok(got) => {
                 if got != want {
@@ -291,7 +380,7 @@ mod tests {
         Ok(())
     }
 
-    fn test_sum_gear_ratios_case(input: &str, want: u32) -> Result<(), String> {
+    fn test_sum_gear_ratios_case(input: &str, want: usize) -> Result<(), String> {
         match sum_gear_ratios(String::from(input)) {
             Ok(got) => {
                 if got != want {
