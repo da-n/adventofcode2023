@@ -1,6 +1,7 @@
 mod day_01;
 mod day_02;
 mod day_03;
+mod day_04;
 
 fn main() {
     // Day one.
@@ -25,6 +26,15 @@ fn main() {
         Ok(totals) => {
             println!("day 03: total - part one: {}", totals.0);
             println!("day 03: total - part two: {}", totals.1);
+        }
+        Err(err) => eprintln!("error: {}", err),
+    }
+
+    // Day four.
+    match day_04::totals() {
+        Ok(totals) => {
+            println!("day 04: total - part one: {}", totals.0);
+            println!("day 04: total - part two: {}", totals.1);
         }
         Err(err) => eprintln!("error: {}", err),
     }
